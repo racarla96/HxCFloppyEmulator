@@ -361,6 +361,14 @@ int hxc_createthread(HXCFE* floppycontext,void* hwcontext,THREADFUNCTION thread,
 		threadinitptr->hwcontext=hwcontext;
 
 		ret = pthread_create(&threadid, &threadattrib,ThreadProc, threadinitptr);
+		if(ret == EPERM && priority)
+		{
+			/* No permission for real-time scheduling (RLIMIT_RTPRIO = 0): retry with the default policy. */
+			pthread_attr_setschedpolicy(&threadattrib,SCHED_OTHER);
+			param.sched_priority = 0;
+			pthread_attr_setschedparam (&threadattrib, &param);
+			ret = pthread_create(&threadid, &threadattrib,ThreadProc, threadinitptr);
+		}
 		if(ret)
 		{
 			floppycontext->hxc_printf(MSG_ERROR,"hxc_createthread : pthread_create failed -> %d",ret);
